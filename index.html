@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HT-DOC | Hệ Thống Quản Lý Văn Bản</title>
+    <title>Quản Lý Văn Bản | Hệ Thống Quản Lý Văn Bản</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <style>
@@ -46,25 +46,21 @@
         <div class="w-full max-w-md bg-white p-8 rounded-lg shadow-xl">
             <div class="text-center mb-8">
                 <i class="fas fa-folder-open text-4xl text-blue-600"></i>
-                <h1 class="text-2xl font-bold mt-3 text-gray-700">Hệ Thống Quản Lý Văn Bản</h1>
+                <h1 class="text-2xl font-bold mt-3 text-gray-700">Quản Lý Văn Bản</h1>
                 <p class="text-gray-500">Đăng nhập để tiếp tục</p>
             </div>
             <form id="login-form">
                 <div class="mb-4">
-                    <label for="username" class="block text-sm font-medium mb-1">Tên đăng nhập</label>
-                    <input type="text" id="username" class="w-full p-3 border rounded-lg" placeholder="admin / user" required>
+                    <label for="username" class="block text-sm font-medium mb-1">Email</label>
+                    <input type="text" id="username" class="w-full p-3 border rounded-lg" placeholder="Nhập email của bạn" required>
                 </div>
                 <div class="mb-6">
                     <label for="password" class="block text-sm font-medium mb-1">Mật khẩu</label>
-                    <input type="password" id="password" class="w-full p-3 border rounded-lg" placeholder="Mật khẩu: 123" required>
+                    <input type="password" id="password" class="w-full p-3 border rounded-lg" placeholder="Nhập mật khẩu" required>
                 </div>
                 <p id="login-error" class="text-red-500 text-sm text-center mb-4"></p>
                 <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 font-semibold">Đăng nhập</button>
             </form>
-             <div class="mt-4 text-xs text-gray-500 text-center">
-                <p><strong>Admin:</strong> admin / 123</p>
-                <p><strong>User:</strong> user / 123</p>
-            </div>
         </div>
     </div>
 
@@ -127,7 +123,7 @@
     </div>
 
     <!-- Modal for Forms -->
-    <div id="form-modal" class="modal fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
+    <div id="form-modal" class="modal fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
         <div class="modal-content bg-white rounded-lg shadow-2xl w-full max-w-3xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
                 <h3 id="modal-title" class="text-xl font-semibold"></h3>
@@ -146,7 +142,7 @@
     </div>
     
     <!-- Toast Notification -->
-    <div id="toast" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 translate-x-full transition-all duration-300">
+    <div id="toast" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 translate-x-full transition-all duration-300 z-50">
         <p id="toast-message"></p>
     </div>
 
@@ -164,8 +160,7 @@
             clearSession: () => sessionStorage.clear(),
             init: () => {
                 if (!DB.getItem('users')) DB.setItem('users', [
-                    { id: 'admin', password: '123', name: 'Quản trị viên', unit: 'Phòng IT', role: 'admin' },
-                    { id: 'user', password: '123', name: 'Nguyễn Văn User', unit: 'Phòng Kế hoạch', role: 'user' }
+                    { id: 'trungdungdsg@gmail.com', password: 'Admin@07110404', name: 'Quản trị viên', unit: 'Administration', role: 'admin' }
                 ]);
                 if (!DB.getItem('documents')) DB.setItem('documents', []);
                 if (!DB.getItem('docTypes')) DB.setItem('docTypes', [{id: 'QD', name: 'Quyết định'}, {id: 'TT', name: 'Thông tư'}]);
@@ -192,7 +187,7 @@
             const toast = $('#toast');
             const toastMessage = $('#toast-message');
             toastMessage.textContent = message;
-            toast.className = `fixed top-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg opacity-100 -translate-x-0 transition-all duration-300 ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+            toast.className = `fixed top-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg opacity-100 -translate-x-0 transition-all duration-300 z-50 ${isError ? 'bg-red-500' : 'bg-green-500'}`;
             setTimeout(() => {
                 toast.className = toast.className.replace('opacity-100 -translate-x-0', 'opacity-0 translate-x-full');
             }, 3000);
@@ -239,7 +234,7 @@
         };
 
         const renderDashboard = () => {
-            const incomingCount = state.documents.filter(d => d.category === 'incoming').length;
+            const incomingCount = state.documents.length;
             const outgoingCount = state.documents.filter(d => d.category === 'outgoing').length;
             const personalCount = state.documents.filter(d => d.category === 'personal').length;
             const totalCount = state.documents.length;
@@ -368,41 +363,44 @@
         
         const renderSettings = () => `
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- User Info -->
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">Thông tin người dùng</h3>
-                    <div class="space-y-4">
+                <!-- User Management -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-3">Quản lý người dùng</h3>
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="xl:col-span-2">
+                             <h4 class="text-md font-semibold mb-3">Danh sách tài khoản</h4>
+                             <div id="user-list-container" class="max-h-96 overflow-y-auto pr-2"></div>
+                        </div>
                         <div>
-                            <label class="block text-sm font-medium">Họ & Tên</label>
-                            <p class="mt-1 p-2 bg-gray-100 rounded-lg w-full">${state.currentUser.name}</p>
-                        </div>
-                         <div>
-                            <label class="block text-sm font-medium">Đơn vị</label>
-                            <p class="mt-1 p-2 bg-gray-100 rounded-lg w-full">${state.currentUser.unit}</p>
-                        </div>
-                         <div>
-                            <label class="block text-sm font-medium">Vai trò</label>
-                            <p class="mt-1 p-2 bg-gray-100 rounded-lg w-full">${state.currentUser.role}</p>
+                            <h4 class="text-md font-semibold mb-3">Thêm tài khoản mới</h4>
+                             <form id="add-user-form" class="space-y-4 bg-gray-50 p-4 rounded-lg">
+                                <div>
+                                    <label class="block text-sm font-medium">Họ & Tên</label>
+                                    <input type="text" name="name" class="mt-1 p-2 border rounded-lg w-full" required>
+                                </div>
+                                 <div>
+                                    <label class="block text-sm font-medium">Email (Tên đăng nhập)</label>
+                                    <input type="email" name="id" class="mt-1 p-2 border rounded-lg w-full" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium">Mật khẩu</label>
+                                    <input type="password" name="password" class="mt-1 p-2 border rounded-lg w-full" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium">Đơn vị</label>
+                                    <input type="text" name="unit" class="mt-1 p-2 border rounded-lg w-full" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium">Vai trò</label>
+                                    <select name="role" class="mt-1 p-2 border rounded-lg w-full" required>
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">Tạo người dùng</button>
+                            </form>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Data Management -->
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">Quản lý dữ liệu</h3>
-                     <div class="space-y-4">
-                        <div>
-                             <p class="font-medium mb-2">Sao lưu dữ liệu</p>
-                             <p class="text-sm text-gray-500 mb-2">Xuất toàn bộ dữ liệu ra tệp JSON.</p>
-                             <button id="backup-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 w-full md:w-auto">Sao lưu</button>
-                        </div>
-                        <div class="border-t pt-4">
-                             <p class="font-medium mb-2">Phục hồi dữ liệu</p>
-                             <p class="text-sm text-gray-500 mb-2">Nhập dữ liệu từ tệp JSON. <strong class="text-red-500">Cảnh báo: Dữ liệu hiện tại sẽ bị ghi đè.</strong></p>
-                             <input type="file" id="restore-input" class="hidden" accept=".json">
-                             <button id="restore-btn" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 w-full md:w-auto">Chọn tệp & Phục hồi</button>
-                        </div>
-                     </div>
                 </div>
 
                 <!-- Doc Types -->
@@ -426,8 +424,61 @@
                         <button type="submit" class="bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700"><i class="fas fa-plus"></i></button>
                     </form>
                 </div>
+
+                 <!-- Data Management -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">Quản lý dữ liệu</h3>
+                     <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                             <p class="font-medium mb-2">Sao lưu dữ liệu</p>
+                             <p class="text-sm text-gray-500 mb-2">Xuất toàn bộ văn bản và danh mục ra tệp JSON.</p>
+                             <button id="backup-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 w-full md:w-auto">Sao lưu</button>
+                        </div>
+                        <div class="border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6">
+                             <p class="font-medium mb-2">Phục hồi dữ liệu</p>
+                             <p class="text-sm text-gray-500 mb-2">Nhập dữ liệu từ tệp JSON. <strong class="text-red-500">Cảnh báo: Dữ liệu hiện tại sẽ bị ghi đè.</strong></p>
+                             <input type="file" id="restore-input" class="hidden" accept=".json">
+                             <button id="restore-btn" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 w-full md:w-auto">Chọn tệp & Phục hồi</button>
+                        </div>
+                     </div>
+                </div>
             </div>
         `;
+
+        const renderUserList = () => {
+            const container = $('#user-list-container');
+            if (!container) return;
+            const users = state.users;
+            container.innerHTML = `
+                 <table class="w-full text-left">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-3 font-semibold text-sm">Họ & Tên</th>
+                            <th class="p-3 font-semibold text-sm">Email</th>
+                            <th class="p-3 font-semibold text-sm">Vai trò</th>
+                            <th class="p-3 font-semibold text-sm text-right">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                    ${users.map(user => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">${user.name}</td>
+                            <td class="p-3 text-gray-600">${user.id}</td>
+                            <td class="p-3"><span class="px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-800'}">${user.role}</span></td>
+                            <td class="p-3 text-right">
+                                ${user.id !== state.currentUser.id ? `
+                                <button data-id="${user.id}" class="delete-user-btn text-red-600 hover:text-red-800 p-1"><i class="fas fa-trash-alt"></i></button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `).join('')}
+                    </tbody>
+                 </table>
+            `;
+            $$('.delete-user-btn').forEach(btn => {
+                btn.addEventListener('click', () => handleDeleteUser(btn.dataset.id));
+            });
+        };
 
         const renderCategoryList = (containerId, items, deleteHandler) => {
             const container = $(containerId);
@@ -606,6 +657,37 @@
             $('#search-results').innerHTML = renderDocumentTable(results);
             attachDynamicEventListeners();
         };
+
+        const handleAddUser = (e) => {
+            e.preventDefault();
+            const form = $('#add-user-form');
+            const formData = new FormData(form);
+            const newUser = Object.fromEntries(formData.entries());
+
+            if (state.users.some(user => user.id.toLowerCase() === newUser.id.toLowerCase())) {
+                showToast(`Email '${newUser.id}' đã tồn tại.`, true);
+                return;
+            }
+
+            state.users.push(newUser);
+            DB.setItem('users', state.users);
+            showToast(`Đã tạo người dùng '${newUser.name}' thành công!`);
+            form.reset();
+            renderUserList(); // only re-render the list
+        };
+
+        const handleDeleteUser = (userId) => {
+            if (userId === state.currentUser.id) {
+                showToast('Bạn không thể xóa chính mình.', true);
+                return;
+            }
+            if (confirm(`Bạn có chắc chắn muốn xóa người dùng '${userId}'?`)) {
+                state.users = state.users.filter(user => user.id !== userId);
+                DB.setItem('users', state.users);
+                showToast('Đã xóa người dùng.');
+                renderUserList();
+            }
+        };
         
         const addCategory = (type, formId) => {
             const form = $(formId);
@@ -649,7 +731,7 @@
             const a = document.createElement('a');
             a.href = url;
             const date = new Date().toISOString().slice(0, 10);
-            a.download = `ht-doc_backup_${date}.json`;
+            a.download = `ht-doc_backup_vanban_${date}.json`;
             a.click();
             URL.revokeObjectURL(url);
             showToast('Đã xuất dữ liệu sao lưu.');
@@ -664,7 +746,7 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     if (data.documents && data.docTypes && data.issuers) {
-                         if (confirm('Bạn có chắc chắn muốn phục hồi dữ liệu? Dữ liệu hiện tại sẽ bị ghi đè.')) {
+                         if (confirm('Bạn có chắc chắn muốn phục hồi dữ liệu? Dữ liệu văn bản và danh mục hiện tại sẽ bị ghi đè.')) {
                             DB.setItem('documents', data.documents);
                             DB.setItem('docTypes', data.docTypes);
                             DB.setItem('issuers', data.issuers);
@@ -706,6 +788,9 @@
             }
 
             if (state.currentView === 'settings' && state.currentUser.role === 'admin') {
+                renderUserList(); // Render user list
+                $('#add-user-form').addEventListener('submit', handleAddUser);
+                
                 renderCategoryList('#doc-types-list', state.docTypes, (id) => deleteCategory('docType', id));
                 renderCategoryList('#issuers-list', state.issuers, (id) => deleteCategory('issuer', id));
                 
@@ -731,7 +816,7 @@
                 DB.setSessionItem('currentUser', user);
                 initializeApp();
             } else {
-                loginError.textContent = 'Tên đăng nhập hoặc mật khẩu không đúng.';
+                loginError.textContent = 'Email hoặc mật khẩu không đúng.';
             }
         };
 
