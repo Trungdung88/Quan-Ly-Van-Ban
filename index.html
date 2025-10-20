@@ -1,864 +1,527 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Văn Bản | Hệ Thống Quản Lý Văn Bản</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <style>
-        /* Custom scrollbar for better UX */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        /* Style for modal transitions */
-        .modal {
-            transition: opacity 0.3s ease;
-        }
-        .modal-content {
-            transition: transform 0.3s ease;
-        }
-        /* Custom font */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        #app {
-             display: none; /* Hide app by default */
-        }
-    </style>
-</head>
-<body class="bg-gray-100 text-gray-800">
+import React, { useState, useEffect } from 'react';
+// Import các hàm cần thiết từ Firebase SDK
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
+import { getFirestore, collection, doc, addDoc, getDoc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 
-    <!-- Login Screen -->
-    <div id="login-screen" class="flex items-center justify-center h-screen bg-gray-200">
-        <div class="w-full max-w-md bg-white p-8 rounded-lg shadow-xl">
-            <div class="text-center mb-8">
-                <i class="fas fa-folder-open text-4xl text-blue-600"></i>
-                <h1 class="text-2xl font-bold mt-3 text-gray-700">Quản Lý Văn Bản</h1>
-                <p class="text-gray-500">Đăng nhập để tiếp tục</p>
-            </div>
-            <form id="login-form">
-                <div class="mb-4">
-                    <label for="username" class="block text-sm font-medium mb-1">Email</label>
-                    <input type="text" id="username" class="w-full p-3 border rounded-lg" placeholder="Nhập email của bạn" required>
-                </div>
-                <div class="mb-6">
-                    <label for="password" class="block text-sm font-medium mb-1">Mật khẩu</label>
-                    <input type="password" id="password" class="w-full p-3 border rounded-lg" placeholder="Nhập mật khẩu" required>
-                </div>
-                <p id="login-error" class="text-red-500 text-sm text-center mb-4"></p>
-                <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 font-semibold">Đăng nhập</button>
-            </form>
-        </div>
-    </div>
+// --- BƯỚC QUAN TRỌNG ---
+// Dán cấu hình Firebase của bạn đã lấy từ Console vào đây.
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
 
+// Khởi tạo các dịch vụ Firebase một lần duy nhất
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-    <!-- Main Container -->
-    <div id="app" class="flex h-screen">
+// --- COMPONENT CHÍNH CỦA ỨNG DỤNG ---
+export default function App() {
+    const [currentUser, setCurrentUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
-        <!-- Sidebar -->
-        <aside class="w-64 bg-white shadow-lg flex-shrink-0 flex flex-col">
-            <div class="h-16 flex items-center justify-center border-b">
-                <i class="fas fa-folder-open text-2xl text-blue-600"></i>
-                <h1 class="text-xl font-bold ml-3 text-gray-700">HT-DOC</h1>
-            </div>
-            <nav id="main-nav" class="flex-grow p-4 space-y-2">
-                <a href="#" data-view="dashboard" class="nav-link flex items-center px-4 py-2 text-gray-700 bg-blue-100 rounded-lg">
-                    <i class="fas fa-tachometer-alt w-6 text-center"></i><span class="ml-3">Bảng điều khiển</span>
-                </a>
-                <a href="#" data-view="incoming" class="nav-link flex items-center px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg">
-                    <i class="fas fa-arrow-down w-6 text-center"></i><span class="ml-3">Văn bản đến</span>
-                </a>
-                <a href="#" data-view="outgoing" class="nav-link flex items-center px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg">
-                    <i class="fas fa-arrow-up w-6 text-center"></i><span class="ml-3">Văn bản đi</span>
-                </a>
-                <a href="#" data-view="personal" class="nav-link flex items-center px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg">
-                    <i class="fas fa-user-circle w-6 text-center"></i><span class="ml-3">Văn bản cá nhân</span>
-                </a>
-                <a href="#" data-view="search" class="nav-link flex items-center px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg">
-                    <i class="fas fa-search w-6 text-center"></i><span class="ml-3">Tìm kiếm</span>
-                </a>
-                <a href="#" data-view="settings" id="nav-settings" class="nav-link flex items-center px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg">
-                    <i class="fas fa-cogs w-6 text-center"></i><span class="ml-3">Thiết lập</span>
-                </a>
-            </nav>
-            <div class="p-4 border-t">
-                <div class="flex items-center">
-                    <img src="https://placehold.co/40x40/E2E8F0/4A5568?text=AV" alt="Avatar" class="rounded-full">
-                    <div class="ml-3 flex-1">
-                        <p id="user-name-display" class="font-semibold text-sm">...</p>
-                        <p id="user-unit-display" class="text-xs text-gray-500">...</p>
-                    </div>
-                    <button id="logout-btn" title="Đăng xuất" class="text-gray-500 hover:text-red-600 ml-2">
-                        <i class="fas fa-sign-out-alt text-lg"></i>
-                    </button>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 flex flex-col overflow-hidden">
-            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6">
-                 <h2 id="view-title" class="text-2xl font-semibold text-gray-800">Bảng điều khiển</h2>
-                 <button id="add-new-btn" class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow flex items-center">
-                     <i class="fas fa-plus mr-2"></i>Thêm mới
-                 </button>
-            </header>
-            <div id="content" class="flex-1 p-6 overflow-y-auto">
-                <!-- Views will be rendered here -->
-            </div>
-        </main>
-    </div>
-
-    <!-- Modal for Forms -->
-    <div id="form-modal" class="modal fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
-        <div class="modal-content bg-white rounded-lg shadow-2xl w-full max-w-3xl transform scale-95">
-             <div class="p-6 border-b flex justify-between items-center">
-                <h3 id="modal-title" class="text-xl font-semibold"></h3>
-                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
-            <div id="modal-body" class="p-6 max-h-[70vh] overflow-y-auto">
-                <!-- Form content will be injected here -->
-            </div>
-            <div class="p-6 bg-gray-50 border-t flex justify-end space-x-3">
-                 <button id="cancel-modal-btn" class="px-5 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Hủy bỏ</button>
-                 <button id="save-modal-btn" class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Lưu lại</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 translate-x-full transition-all duration-300 z-50">
-        <p id="toast-message"></p>
-    </div>
-
-
-    <script>
-    // --- APP SCRIPT ---
-    document.addEventListener('DOMContentLoaded', () => {
-
-        // --- STATE MANAGEMENT & DATABASE (LOCALSTORAGE) ---
-        const DB = {
-            getItem: (key) => JSON.parse(localStorage.getItem(key)),
-            setItem: (key, value) => localStorage.setItem(key, JSON.stringify(value)),
-            getSessionItem: (key) => JSON.parse(sessionStorage.getItem(key)),
-            setSessionItem: (key, value) => sessionStorage.setItem(key, JSON.stringify(value)),
-            clearSession: () => sessionStorage.clear(),
-            init: () => {
-                if (!DB.getItem('users')) DB.setItem('users', [
-                    { id: 'trungdungdsg@gmail.com', password: 'Admin@07110404', name: 'Quản trị viên', unit: 'Administration', role: 'admin' }
-                ]);
-                if (!DB.getItem('documents')) DB.setItem('documents', []);
-                if (!DB.getItem('docTypes')) DB.setItem('docTypes', [{id: 'QD', name: 'Quyết định'}, {id: 'TT', name: 'Thông tư'}]);
-                if (!DB.getItem('issuers')) DB.setItem('issuers', [{id: 'BCT', name: 'Bộ Công Thương'}, {id: 'BTC', name: 'Bộ Tài chính'}]);
-            }
-        };
-
-        DB.init();
-
-        const state = {
-            currentUser: null,
-            currentView: 'dashboard',
-            editingDocId: null,
-            documents: DB.getItem('documents'),
-            docTypes: DB.getItem('docTypes'),
-            issuers: DB.getItem('issuers'),
-            users: DB.getItem('users'),
-        };
-        
-        // --- UTILITY FUNCTIONS ---
-        const $ = (selector) => document.querySelector(selector);
-        const $$ = (selector) => document.querySelectorAll(selector);
-        const showToast = (message, isError = false) => {
-            const toast = $('#toast');
-            const toastMessage = $('#toast-message');
-            toastMessage.textContent = message;
-            toast.className = `fixed top-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg opacity-100 -translate-x-0 transition-all duration-300 z-50 ${isError ? 'bg-red-500' : 'bg-green-500'}`;
-            setTimeout(() => {
-                toast.className = toast.className.replace('opacity-100 -translate-x-0', 'opacity-0 translate-x-full');
-            }, 3000);
-        };
-        const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
-        const formatDate = (date) => date ? new Date(date).toLocaleDateString('vi-VN') : '';
-        const formatDateForInput = (date) => date ? new Date(date).toISOString().split('T')[0] : '';
-
-
-        // --- TEMPLATES & RENDERING ---
-
-        const renderContent = () => {
-            const content = $('#content');
-            $('#view-title').textContent = $$(`.nav-link[data-view="${state.currentView}"] span`)[0].textContent;
-            
-            const addNewBtn = $('#add-new-btn');
-            if (['incoming', 'outgoing', 'personal'].includes(state.currentView)) {
-                addNewBtn.classList.remove('hidden');
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDocRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                    setCurrentUser({ uid: user.uid, ...docSnap.data() });
+                } else {
+                    console.error("Không tìm thấy thông tin người dùng!");
+                    signOut(auth);
+                }
             } else {
-                addNewBtn.classList.add('hidden');
+                setCurrentUser(null);
             }
-            
-            switch(state.currentView) {
-                case 'dashboard':
-                    content.innerHTML = renderDashboard();
-                    break;
-                case 'incoming':
-                case 'outgoing':
-                case 'personal':
-                    content.innerHTML = renderDocumentList(state.currentView);
-                    break;
-                case 'search':
-                    content.innerHTML = renderSearch();
-                    break;
-                case 'settings':
-                    if (state.currentUser.role === 'admin') {
-                        content.innerHTML = renderSettings();
-                    } else {
-                        content.innerHTML = `<p class="text-center text-red-500">Bạn không có quyền truy cập trang này.</p>`;
-                    }
-                    break;
-            }
-            attachDynamicEventListeners();
-        };
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
 
-        const renderDashboard = () => {
-            const incomingCount = state.documents.length;
-            const outgoingCount = state.documents.filter(d => d.category === 'outgoing').length;
-            const personalCount = state.documents.filter(d => d.category === 'personal').length;
-            const totalCount = state.documents.length;
-
-            return `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="bg-white p-6 rounded-lg shadow-md flex items-center">
-                        <div class="bg-blue-100 p-4 rounded-full"><i class="fas fa-arrow-down text-blue-600 text-2xl"></i></div>
-                        <div class="ml-4">
-                            <p class="text-gray-500">Văn bản đến</p>
-                            <p class="text-2xl font-bold">${incomingCount}</p>
-                        </div>
-                    </div>
-                     <div class="bg-white p-6 rounded-lg shadow-md flex items-center">
-                        <div class="bg-green-100 p-4 rounded-full"><i class="fas fa-arrow-up text-green-600 text-2xl"></i></div>
-                        <div class="ml-4">
-                            <p class="text-gray-500">Văn bản đi</p>
-                            <p class="text-2xl font-bold">${outgoingCount}</p>
-                        </div>
-                    </div>
-                     <div class="bg-white p-6 rounded-lg shadow-md flex items-center">
-                        <div class="bg-yellow-100 p-4 rounded-full"><i class="fas fa-user-circle text-yellow-600 text-2xl"></i></div>
-                        <div class="ml-4">
-                            <p class="text-gray-500">Văn bản cá nhân</p>
-                            <p class="text-2xl font-bold">${personalCount}</p>
-                        </div>
-                    </div>
-                     <div class="bg-white p-6 rounded-lg shadow-md flex items-center">
-                        <div class="bg-indigo-100 p-4 rounded-full"><i class="fas fa-folder-open text-indigo-600 text-2xl"></i></div>
-                        <div class="ml-4">
-                            <p class="text-gray-500">Tổng số văn bản</p>
-                            <p class="text-2xl font-bold">${totalCount}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold mb-4">Văn bản gần đây</h3>
-                    <div class="overflow-x-auto">
-                        ${renderDocumentTable(state.documents.slice(-5).reverse())}
-                    </div>
-                </div>
-            `;
-        };
-        
-        const getCategoryName = (category) => {
-            switch(category) {
-                case 'incoming': return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Đến</span>';
-                case 'outgoing': return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Đi</span>';
-                case 'personal': return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Cá nhân</span>';
-                default: return '';
-            }
+    const handleLogin = async (email, password) => {
+        setError('');
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (err) {
+            setError('Email hoặc mật khẩu không chính xác.');
         }
+    };
 
-        const renderDocumentTable = (docs) => {
-            if (docs.length === 0) {
-                return `<div class="text-center py-10 text-gray-500">
-                    <i class="fas fa-box-open text-4xl mb-3"></i>
-                    <p>Chưa có văn bản nào.</p>
-                </div>`;
-            }
-            return `
-                 <table class="w-full text-left">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="p-3 font-semibold text-sm">Số/Ký hiệu</th>
-                            <th class="p-3 font-semibold text-sm">Trích yếu</th>
-                            <th class="p-3 font-semibold text-sm">Loại</th>
-                            <th class="p-3 font-semibold text-sm">Ngày ban hành</th>
-                            <th class="p-3 font-semibold text-sm">Người tạo</th>
-                            <th class="p-3 font-semibold text-sm text-right">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        ${docs.map(doc => {
-                            const canModify = state.currentUser.role === 'admin' || doc.createdBy === state.currentUser.id;
-                            const creator = state.users.find(u => u.id === doc.createdBy);
-                            return `
-                                <tr class="hover:bg-gray-50">
-                                    <td class="p-3 font-medium">${doc.docNumber}</td>
-                                    <td class="p-3 text-gray-600 max-w-sm truncate">${doc.summary}</td>
-                                    <td class="p-3">${getCategoryName(doc.category)}</td>
-                                    <td class="p-3 text-gray-600">${formatDate(doc.issueDate)}</td>
-                                    <td class="p-3 text-gray-500 text-sm">${creator ? creator.name : 'N/A'}</td>
-                                    <td class="p-3 text-right">
-                                        ${canModify ? `
-                                        <button data-id="${doc.id}" class="edit-btn text-blue-600 hover:text-blue-800 p-1"><i class="fas fa-pencil-alt"></i></button>
-                                        <button data-id="${doc.id}" class="delete-btn text-red-600 hover:text-red-800 p-1 ml-2"><i class="fas fa-trash-alt"></i></button>
-                                        ` : '<span class="text-xs text-gray-400">Không có quyền</span>'}
-                                    </td>
-                                </tr>
-                            `
-                        }).join('')}
-                    </tbody>
-                </table>
-            `;
-        };
-        
-        const renderDocumentList = (category) => {
-            const filteredDocs = state.documents.filter(doc => doc.category === category);
-            return `
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    ${renderDocumentTable(filteredDocs)}
-                </div>
-            `;
-        };
+    const handleLogout = () => {
+        signOut(auth);
+    };
 
-        const renderSearch = () => {
-            return `
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <input id="search-keyword" type="text" placeholder="Từ khóa trong ký hiệu, trích yếu..." class="p-2 border rounded-lg w-full col-span-1 md:col-span-2 lg:col-span-2">
-                        <input id="search-start-date" type="date" class="p-2 border rounded-lg w-full">
-                        <input id="search-end-date" type="date" class="p-2 border rounded-lg w-full">
-                    </div>
-                     <div class="flex justify-center">
-                        <button id="search-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 shadow flex items-center">
-                             <i class="fas fa-search mr-2"></i>Tìm kiếm
-                         </button>
-                    </div>
-                </div>
-                <div id="search-results" class="mt-8 bg-white p-6 rounded-lg shadow-md">
-                    <p class="text-center text-gray-500">Nhập tiêu chí và nhấn tìm kiếm để xem kết quả.</p>
-                </div>
-            `;
-        };
-        
-        const renderSettings = () => `
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- User Management -->
-                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-xl font-semibold mb-4 border-b pb-3">Quản lý người dùng</h3>
-                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                        <div class="xl:col-span-2">
-                             <h4 class="text-md font-semibold mb-3">Danh sách tài khoản</h4>
-                             <div id="user-list-container" class="max-h-96 overflow-y-auto pr-2"></div>
+    if (loading) {
+        return <div className="flex items-center justify-center min-h-screen bg-gray-100 font-sans">Đang tải ứng dụng...</div>;
+    }
+
+    return (
+        <div className="font-sans">
+            {!currentUser ? (
+                <LoginScreen handleLogin={handleLogin} error={error} setError={setError} />
+            ) : (
+                <Dashboard user={currentUser} onLogout={handleLogout} />
+            )}
+        </div>
+    );
+}
+
+// --- MÀN HÌNH ĐĂNG NHẬP VÀ QUÊN MẬT KHẨU ---
+function LoginScreen({ handleLogin, error, setError }) {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
+    const handleForgotPassword = async () => {
+        if (!email) {
+            setError("Vui lòng nhập email của bạn để cấp lại mật khẩu.");
+            return;
+        }
+        try {
+            await sendPasswordResetEmail(auth, email);
+            alert(`Một email hướng dẫn cấp lại mật khẩu đã được gửi đến ${email}. Vui lòng kiểm tra hộp thư của bạn.`);
+            setError('');
+        } catch (err) {
+            setError("Email không tồn tại trong hệ thống.");
+            console.error(err);
+        }
+    };
+
+    const onFormSubmit = (e) => {
+        e.preventDefault();
+        handleLogin(email, password);
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+            <div className="sm:mx-auto sm:w-full sm:max-w-md">
+                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Hệ thống Quản lý Công việc</h2>
+            </div>
+            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+                <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+                    <form className="space-y-6" onSubmit={onFormSubmit}>
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                            <input id="email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
                         </div>
                         <div>
-                            <h4 class="text-md font-semibold mb-3">Thêm tài khoản mới</h4>
-                             <form id="add-user-form" class="space-y-4 bg-gray-50 p-4 rounded-lg">
-                                <div>
-                                    <label class="block text-sm font-medium">Họ & Tên</label>
-                                    <input type="text" name="name" class="mt-1 p-2 border rounded-lg w-full" required>
-                                </div>
-                                 <div>
-                                    <label class="block text-sm font-medium">Email (Tên đăng nhập)</label>
-                                    <input type="email" name="id" class="mt-1 p-2 border rounded-lg w-full" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium">Mật khẩu</label>
-                                    <input type="password" name="password" class="mt-1 p-2 border rounded-lg w-full" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium">Đơn vị</label>
-                                    <input type="text" name="unit" class="mt-1 p-2 border rounded-lg w-full" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium">Vai trò</label>
-                                    <select name="role" class="mt-1 p-2 border rounded-lg w-full" required>
-                                        <option value="user">User</option>
-                                        <option value="admin">Admin</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">Tạo người dùng</button>
-                            </form>
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Mật khẩu</label>
+                            <input id="password" name="password" type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Doc Types -->
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">Danh mục Loại văn bản</h3>
-                    <div id="doc-types-list" class="space-y-2 mb-4 max-h-48 overflow-y-auto"></div>
-                    <form id="add-doc-type-form" class="flex gap-2">
-                        <input type="text" name="id" placeholder="Mã loại (VD: QD)" class="p-2 border rounded-lg w-1/3" required>
-                        <input type="text" name="name" placeholder="Tên loại (VD: Quyết định)" class="p-2 border rounded-lg flex-1" required>
-                        <button type="submit" class="bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700"><i class="fas fa-plus"></i></button>
+                        {error && <p className="text-red-500 text-sm">{error}</p>}
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm">
+                                <button type="button" onClick={handleForgotPassword} className="font-medium text-indigo-600 hover:text-indigo-500">
+                                    Quên mật khẩu?
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                                Đăng nhập
+                            </button>
+                        </div>
                     </form>
                 </div>
-                
-                <!-- Issuers -->
-                 <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">Danh mục Nơi ban hành</h3>
-                    <div id="issuers-list" class="space-y-2 mb-4 max-h-48 overflow-y-auto"></div>
-                    <form id="add-issuer-form" class="flex gap-2">
-                        <input type="text" name="id" placeholder="Mã nơi (VD: BTC)" class="p-2 border rounded-lg w-1/3" required>
-                        <input type="text" name="name" placeholder="Tên nơi (VD: Bộ Tài chính)" class="p-2 border rounded-lg flex-1" required>
-                        <button type="submit" class="bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700"><i class="fas fa-plus"></i></button>
-                    </form>
-                </div>
-
-                 <!-- Data Management -->
-                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">Quản lý dữ liệu</h3>
-                     <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                             <p class="font-medium mb-2">Sao lưu dữ liệu</p>
-                             <p class="text-sm text-gray-500 mb-2">Xuất toàn bộ văn bản và danh mục ra tệp JSON.</p>
-                             <button id="backup-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 w-full md:w-auto">Sao lưu</button>
-                        </div>
-                        <div class="border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6">
-                             <p class="font-medium mb-2">Phục hồi dữ liệu</p>
-                             <p class="text-sm text-gray-500 mb-2">Nhập dữ liệu từ tệp JSON. <strong class="text-red-500">Cảnh báo: Dữ liệu hiện tại sẽ bị ghi đè.</strong></p>
-                             <input type="file" id="restore-input" class="hidden" accept=".json">
-                             <button id="restore-btn" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 w-full md:w-auto">Chọn tệp & Phục hồi</button>
-                        </div>
-                     </div>
-                </div>
             </div>
-        `;
+        </div>
+    );
+}
 
-        const renderUserList = () => {
-            const container = $('#user-list-container');
-            if (!container) return;
-            const users = state.users;
-            container.innerHTML = `
-                 <table class="w-full text-left">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="p-3 font-semibold text-sm">Họ & Tên</th>
-                            <th class="p-3 font-semibold text-sm">Email</th>
-                            <th class="p-3 font-semibold text-sm">Vai trò</th>
-                            <th class="p-3 font-semibold text-sm text-right">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                    ${users.map(user => `
-                        <tr class="hover:bg-gray-50">
-                            <td class="p-3">${user.name}</td>
-                            <td class="p-3 text-gray-600">${user.id}</td>
-                            <td class="p-3"><span class="px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-800'}">${user.role}</span></td>
-                            <td class="p-3 text-right">
-                                ${user.id !== state.currentUser.id ? `
-                                <button data-id="${user.id}" class="delete-user-btn text-red-600 hover:text-red-800 p-1"><i class="fas fa-trash-alt"></i></button>
-                                ` : ''}
-                            </td>
-                        </tr>
-                    `).join('')}
-                    </tbody>
-                 </table>
-            `;
-            $$('.delete-user-btn').forEach(btn => {
-                btn.addEventListener('click', () => handleDeleteUser(btn.dataset.id));
-            });
-        };
+// --- BẢNG ĐIỀU KHIỂN CHÍNH ---
+function Dashboard({ user, onLogout }) {
+    // State để chuyển đổi giữa màn hình Bảng công việc và Hồ sơ
+    const [view, setView] = useState('tasks'); // 'tasks' or 'profile'
 
-        const renderCategoryList = (containerId, items, deleteHandler) => {
-            const container = $(containerId);
-            container.innerHTML = items.map(item => `
-                <div class="flex justify-between items-center bg-gray-100 p-2 rounded">
-                    <span><strong>${item.id}</strong> - ${item.name}</span>
-                    <button data-id="${item.id}" class="delete-category-btn text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
-                </div>
-            `).join('');
-
-            $$(`${containerId} .delete-category-btn`).forEach(btn => {
-                btn.addEventListener('click', () => deleteHandler(btn.dataset.id));
-            });
-        };
-
-        const renderForm = (doc = {}) => {
-            const isNew = !doc.id;
-            state.editingDocId = doc.id || null;
-            const category = doc.category || state.currentView;
-
-            const modalTitle = $('#modal-title');
-            const modalBody = $('#modal-body');
-
-            if (isNew) {
-                modalTitle.textContent = `Thêm mới văn bản ${category === 'incoming' ? 'đến' : category === 'outgoing' ? 'đi' : 'cá nhân'}`;
-            } else {
-                modalTitle.textContent = `Cập nhật văn bản - ${doc.docNumber}`;
-            }
-            
-            const docTypesOptions = state.docTypes.map(t => `<option value="${t.id}" ${doc.docTypeId === t.id ? 'selected':''}>${t.name}</option>`).join('');
-            const issuersOptions = state.issuers.map(i => `<option value="${i.id}" ${doc.issuerId === i.id ? 'selected':''}>${i.name}</option>`).join('');
-            
-            modalBody.innerHTML = `
-                <form id="document-form" class="space-y-4">
-                    <input type="hidden" name="id" value="${doc.id || ''}">
-                    <input type="hidden" name="category" value="${category}">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium">Số / Ký hiệu *</label>
-                            <input type="text" name="docNumber" value="${doc.docNumber || ''}" class="mt-1 p-2 border rounded-lg w-full" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium">Loại văn bản *</label>
-                             <select name="docTypeId" class="mt-1 p-2 border rounded-lg w-full" required>
-                                <option value="">-- Chọn loại --</option>
-                                ${docTypesOptions}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium">Ngày ban hành *</label>
-                            <input type="date" name="issueDate" value="${formatDateForInput(doc.issueDate)}" class="mt-1 p-2 border rounded-lg w-full" required>
-                        </div>
-                         <div>
-                            <label class="block text-sm font-medium">${category === 'incoming' ? 'Ngày nhận' : 'Ngày gửi'} *</label>
-                            <input type="date" name="receivedSentDate" value="${formatDateForInput(doc.receivedSentDate)}" class="mt-1 p-2 border rounded-lg w-full" required>
-                        </div>
-                         <div>
-                            <label class="block text-sm font-medium">Nơi ban hành *</label>
-                            <select name="issuerId" class="mt-1 p-2 border rounded-lg w-full" required>
-                                <option value="">-- Chọn nơi ban hành --</option>
-                                ${issuersOptions}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium">Người ký</label>
-                            <input type="text" name="signer" value="${doc.signer || ''}" class="mt-1 p-2 border rounded-lg w-full">
-                        </div>
-                    </div>
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <header className="bg-white shadow-sm sticky top-0 z-20">
+                <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
                     <div>
-                        <label class="block text-sm font-medium">Trích yếu (tóm tắt) *</label>
-                        <textarea name="summary" rows="2" class="mt-1 p-2 border rounded-lg w-full" required>${doc.summary || ''}</textarea>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            {view === 'tasks' ? 'Bảng điều khiển' : 'Hồ sơ Cá nhân'}
+                        </h1>
+                        <p className="text-sm text-gray-600">Chào, {user.fullName} ({user.title})</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setView(view === 'tasks' ? 'profile' : 'tasks')}
+                            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition">
+                             {view === 'tasks' ? 'Hồ sơ của tôi' : 'Bảng công việc'}
+                        </button>
+                        <button onClick={onLogout} className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
+                            Đăng xuất
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                {view === 'profile' ? (
+                    <ProfilePage user={user} />
+                ) : user.role === 'manager' ? (
+                    <ManagerView manager={user} />
+                ) : (
+                    <MemberView member={user} />
+                )}
+            </main>
+        </div>
+    );
+}
+
+
+// --- TRANG HỒ SƠ CÁ NHÂN ---
+function ProfilePage({ user }) {
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [message, setMessage] = useState({ type: '', content: '' });
+    const [files, setFiles] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Lấy danh sách tệp tin cá nhân
+    useEffect(() => {
+        const filesRef = ref(storage, `profiles/${user.uid}`);
+        listAll(filesRef)
+            .then(res => {
+                const filePromises = res.items.map(itemRef => getDownloadURL(itemRef).then(url => ({ name: itemRef.name, url })));
+                Promise.all(filePromises).then(setFiles);
+            })
+            .catch(err => console.error("Lỗi khi lấy danh sách tệp: ", err));
+    }, [user.uid]);
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            setMessage({ type: 'error', content: 'Mật khẩu xác nhận không khớp.' });
+            return;
+        }
+        if (newPassword.length < 6) {
+            setMessage({ type: 'error', content: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+            return;
+        }
+        try {
+            await updatePassword(auth.currentUser, newPassword);
+            setMessage({ type: 'success', content: 'Đổi mật khẩu thành công!' });
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error) {
+            setMessage({ type: 'error', content: 'Đã xảy ra lỗi. Vui lòng đăng xuất và đăng nhập lại trước khi đổi mật khẩu.' });
+            console.error("Lỗi khi đổi mật khẩu: ", error);
+        }
+    };
+    
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setIsUploading(true);
+        const fileRef = ref(storage, `profiles/${user.uid}/${file.name}`);
+        try {
+            await uploadBytes(fileRef, file);
+            const url = await getDownloadURL(fileRef);
+            setFiles(prevFiles => [...prevFiles, { name: file.name, url }]);
+            alert("Tải tệp lên thành công!");
+        } catch (error) {
+            console.error("Lỗi khi tải tệp: ", error);
+            alert("Đã xảy ra lỗi khi tải tệp.");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    return (
+        <div className="space-y-8">
+            {/* Phần đổi mật khẩu */}
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-medium mb-4">Đổi mật khẩu</h3>
+                <form onSubmit={handleChangePassword} className="space-y-4 max-w-sm">
+                    {/* ... form fields ... */}
+                     <div>
+                        <label className="block text-sm font-medium">Mật khẩu mới</label>
+                        <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required
+                               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"/>
                     </div>
                      <div>
-                        <label class="block text-sm font-medium">Nội dung chi tiết</label>
-                        <textarea name="content" rows="4" class="mt-1 p-2 border rounded-lg w-full">${doc.content || ''}</textarea>
+                        <label className="block text-sm font-medium">Xác nhận mật khẩu mới</label>
+                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required
+                               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"/>
                     </div>
+                    <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md">Cập nhật mật khẩu</button>
+                    {message.content && (
+                        <p className={`text-sm ${message.type === 'error' ? 'text-red-500' : 'text-green-500'}`}>{message.content}</p>
+                    )}
                 </form>
-            `;
-            $('#form-modal').classList.remove('hidden');
-            $('#form-modal').classList.add('flex');
-            setTimeout(() => {
-                 $('.modal-content').classList.remove('scale-95');
-            }, 10)
+            </div>
+            {/* Phần hồ sơ cá nhân */}
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-medium mb-4">Hồ sơ cá nhân</h3>
+                <div className="mb-4">
+                    <label htmlFor="file-upload" className="cursor-pointer px-4 py-2 bg-green-600 text-white rounded-md">
+                        {isUploading ? "Đang tải lên..." : "+ Tải lên tệp mới"}
+                    </label>
+                    <input id="file-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+                </div>
+                <ul className="space-y-2">
+                    {files.map(file => (
+                        <li key={file.name} className="flex justify-between items-center p-2 border rounded-md">
+                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{file.name}</a>
+                        </li>
+                    ))}
+                    {files.length === 0 && <p className="text-gray-500">Chưa có hồ sơ nào được lưu trữ.</p>}
+                </ul>
+            </div>
+        </div>
+    );
+}
+
+// ... Các component còn lại (ManagerView, MemberView, TaskItem, CreateTaskModal) giữ nguyên cấu trúc
+// nhưng cần một vài chỉnh sửa nhỏ để tích hợp chức năng mới nếu cần.
+
+// --- CÁC COMPONENT KHÁC (GIỮ NGUYÊN HOẶC CHỈNH SỬA NHỎ) ---
+// (Dán các component ManagerView, MemberView, TaskItem, CreateTaskModal từ phiên bản trước vào đây)
+// --- GIAO DIỆN CỦA TRƯỞNG PHÒNG ---
+function ManagerView({ manager }) {
+    const [tasks, setTasks] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Lấy dữ liệu công việc và thành viên từ Firestore
+    useEffect(() => {
+        const tasksQuery = query(collection(db, "tasks"));
+        const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
+            const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setTasks(tasksData);
+            setIsLoading(false);
+        });
+
+        const fetchUsers = async () => {
+            const usersQuery = query(collection(db, "users"), where("role", "==", "member"));
+            const usersSnapshot = await getDocs(usersQuery);
+            const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setUsers(usersData);
         };
-        
+        fetchUsers();
+        return () => unsubscribeTasks();
+    }, []);
 
-        // --- EVENT HANDLERS & LOGIC ---
-
-        const navigate = (view) => {
-            if (view === 'settings' && state.currentUser.role !== 'admin') {
-                showToast('Bạn không có quyền truy cập chức năng này.', true);
-                return;
-            }
-            state.currentView = view;
-            $$('.nav-link').forEach(link => {
-                link.classList.remove('bg-blue-100', 'font-semibold');
-                if (link.dataset.view === view) {
-                    link.classList.add('bg-blue-100', 'font-semibold');
-                }
+    const handleCreateTask = async (newTask) => {
+        try {
+            await addDoc(collection(db, 'tasks'), {
+                ...newTask,
+                createdAt: serverTimestamp(),
+                status: 'pending',
+                progress: 0,
             });
-            renderContent();
-        };
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error("Lỗi khi tạo công việc: ", error);
+            alert("Đã xảy ra lỗi khi giao việc.");
+        }
+    };
 
-        const handleFormSubmit = () => {
-            const form = $('#document-form');
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-
-            const formData = new FormData(form);
-            const doc = Object.fromEntries(formData.entries());
-            
-            if (state.editingDocId) {
-                const index = state.documents.findIndex(d => d.id === state.editingDocId);
-                // Ensure creator isn't overwritten on update
-                doc.createdBy = state.documents[index].createdBy;
-                state.documents[index] = { ...state.documents[index], ...doc };
-                showToast('Cập nhật văn bản thành công!');
-            } else {
-                doc.id = generateId();
-                doc.createdBy = state.currentUser.id; // Set creator
-                state.documents.push(doc);
-                showToast('Thêm mới văn bản thành công!');
-            }
-
-            DB.setItem('documents', state.documents);
-            closeModal();
-            renderContent();
-        };
-
-        const openEditModal = (id) => {
-            const doc = state.documents.find(d => d.id === id);
-            if(doc) renderForm(doc);
-        };
-
-        const deleteDocument = (id) => {
-            const docToDelete = state.documents.find(d => d.id === id);
-            if (!docToDelete) return;
-
-            const canDelete = state.currentUser.role === 'admin' || docToDelete.createdBy === state.currentUser.id;
-
-            if (canDelete && confirm('Bạn có chắc chắn muốn xóa văn bản này?')) {
-                state.documents = state.documents.filter(d => d.id !== id);
-                DB.setItem('documents', state.documents);
-                showToast('Đã xóa văn bản.');
-                renderContent();
-            } else if (!canDelete) {
-                 showToast('Bạn không có quyền xóa văn bản này.', true);
-            }
-        };
-
-        const closeModal = () => {
-            const modal = $('#form-modal');
-            $('.modal-content').classList.add('scale-95');
-            modal.classList.add('opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('opacity-0');
-                $('#modal-body').innerHTML = '';
-                state.editingDocId = null;
-            }, 300);
-        };
-
-        const handleSearch = () => {
-            const keyword = $('#search-keyword').value.toLowerCase();
-            const startDate = $('#search-start-date').value;
-            const endDate = $('#search-end-date').value;
-
-            const results = state.documents.filter(doc => {
-                const matchKeyword = !keyword || doc.docNumber.toLowerCase().includes(keyword) || doc.summary.toLowerCase().includes(keyword);
-                const matchDate = (!startDate || doc.issueDate >= startDate) && (!endDate || doc.issueDate <= endDate);
-                return matchKeyword && matchDate;
-            });
-            
-            $('#search-results').innerHTML = renderDocumentTable(results);
-            attachDynamicEventListeners();
-        };
-
-        const handleAddUser = (e) => {
-            e.preventDefault();
-            const form = $('#add-user-form');
-            const formData = new FormData(form);
-            const newUser = Object.fromEntries(formData.entries());
-
-            if (state.users.some(user => user.id.toLowerCase() === newUser.id.toLowerCase())) {
-                showToast(`Email '${newUser.id}' đã tồn tại.`, true);
-                return;
-            }
-
-            state.users.push(newUser);
-            DB.setItem('users', state.users);
-            showToast(`Đã tạo người dùng '${newUser.name}' thành công!`);
-            form.reset();
-            renderUserList(); // only re-render the list
-        };
-
-        const handleDeleteUser = (userId) => {
-            if (userId === state.currentUser.id) {
-                showToast('Bạn không thể xóa chính mình.', true);
-                return;
-            }
-            if (confirm(`Bạn có chắc chắn muốn xóa người dùng '${userId}'?`)) {
-                state.users = state.users.filter(user => user.id !== userId);
-                DB.setItem('users', state.users);
-                showToast('Đã xóa người dùng.');
-                renderUserList();
-            }
-        };
-        
-        const addCategory = (type, formId) => {
-            const form = $(formId);
-            const formData = new FormData(form);
-            const newItem = Object.fromEntries(formData.entries());
-            
-            const list = type === 'docType' ? state.docTypes : state.issuers;
-            if (list.some(item => item.id.toLowerCase() === newItem.id.toLowerCase())) {
-                showToast(`Mã '${newItem.id}' đã tồn tại.`, true);
-                return;
-            }
-            list.push(newItem);
-            DB.setItem(type === 'docType' ? 'docTypes' : 'issuers', list);
-            showToast('Thêm danh mục thành công!');
-            form.reset();
-            renderSettings();
-        };
-
-        const deleteCategory = (type, id) => {
-            if (confirm('Bạn có chắc chắn muốn xóa danh mục này?')) {
-                 if (type === 'docType') {
-                    state.docTypes = state.docTypes.filter(item => item.id !== id);
-                    DB.setItem('docTypes', state.docTypes);
-                } else {
-                    state.issuers = state.issuers.filter(item => item.id !== id);
-                    DB.setItem('issuers', state.issuers);
-                }
-                showToast('Đã xóa danh mục.');
-                renderSettings();
-            }
-        };
-
-        const backupData = () => {
-            const dataStr = JSON.stringify({
-                documents: state.documents,
-                docTypes: state.docTypes,
-                issuers: state.issuers
-            });
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            const date = new Date().toISOString().slice(0, 10);
-            a.download = `ht-doc_backup_vanban_${date}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('Đã xuất dữ liệu sao lưu.');
-        };
-        
-        const restoreData = (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.documents && data.docTypes && data.issuers) {
-                         if (confirm('Bạn có chắc chắn muốn phục hồi dữ liệu? Dữ liệu văn bản và danh mục hiện tại sẽ bị ghi đè.')) {
-                            DB.setItem('documents', data.documents);
-                            DB.setItem('docTypes', data.docTypes);
-                            DB.setItem('issuers', data.issuers);
-                            
-                            state.documents = data.documents;
-                            state.docTypes = data.docTypes;
-                            state.issuers = data.issuers;
-                            
-                            showToast('Phục hồi dữ liệu thành công!');
-                            navigate('dashboard');
-                        }
-                    } else {
-                        showToast('Tệp không hợp lệ.', true);
-                    }
-                } catch (error) {
-                    showToast('Lỗi khi đọc tệp.', true);
-                }
-            };
-            reader.readAsText(file);
-            $('#restore-input').value = '';
-        };
-
-        const updateUserProfileDisplay = () => {
-             $('#user-name-display').textContent = state.currentUser.name;
-             $('#user-unit-display').textContent = state.currentUser.unit;
-             if (state.currentUser.role !== 'admin') {
-                $('#nav-settings').style.display = 'none';
-             } else {
-                $('#nav-settings').style.display = 'flex';
-             }
-        };
-
-        function attachDynamicEventListeners() {
-            $$('.edit-btn').forEach(btn => btn.onclick = () => openEditModal(btn.dataset.id));
-            $$('.delete-btn').forEach(btn => btn.onclick = () => deleteDocument(btn.dataset.id));
-            
-            if (state.currentView === 'search') {
-                $('#search-btn').addEventListener('click', handleSearch);
-            }
-
-            if (state.currentView === 'settings' && state.currentUser.role === 'admin') {
-                renderUserList(); // Render user list
-                $('#add-user-form').addEventListener('submit', handleAddUser);
-                
-                renderCategoryList('#doc-types-list', state.docTypes, (id) => deleteCategory('docType', id));
-                renderCategoryList('#issuers-list', state.issuers, (id) => deleteCategory('issuer', id));
-                
-                $('#add-doc-type-form').addEventListener('submit', (e) => { e.preventDefault(); addCategory('docType', '#add-doc-type-form'); });
-                $('#add-issuer-form').addEventListener('submit', (e) => { e.preventDefault(); addCategory('issuer', '#add-issuer-form'); });
-                $('#backup-btn').addEventListener('click', backupData);
-                $('#restore-btn').addEventListener('click', () => $('#restore-input').click());
-                $('#restore-input').addEventListener('change', restoreData);
+    const handleDeleteTask = async (taskId) => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa công việc này?")) {
+            try {
+                await deleteDoc(doc(db, 'tasks', taskId));
+            } catch (error) {
+                console.error("Lỗi khi xóa công việc: ", error);
             }
         }
-        
-        // --- AUTHENTICATION LOGIC ---
-        const handleLogin = (e) => {
-            e.preventDefault();
-            const username = $('#username').value;
-            const password = $('#password').value;
-            const loginError = $('#login-error');
-
-            const user = state.users.find(u => u.id === username && u.password === password);
-
-            if (user) {
-                loginError.textContent = '';
-                DB.setSessionItem('currentUser', user);
-                initializeApp();
-            } else {
-                loginError.textContent = 'Email hoặc mật khẩu không đúng.';
+    };
+    
+    const handleResetPassword = async (userEmail) => {
+         if (window.confirm(`Bạn có chắc chắn muốn gửi email cấp lại mật khẩu cho ${userEmail}?`)) {
+            try {
+                await sendPasswordResetEmail(auth, userEmail);
+                alert(`Yêu cầu đã được gửi. ${userEmail} sẽ nhận được email hướng dẫn.`);
+            } catch(error) {
+                alert("Đã xảy ra lỗi. Email này có thể không tồn tại.");
+                console.error("Lỗi khi cấp lại mật khẩu: ", error);
             }
+        }
+    }
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Quản lý Công việc</h2>
+                <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
+                    + Giao việc mới
+                </button>
+            </div>
+            
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                <ul role="list" className="divide-y divide-gray-200">
+                    {isLoading ? <li className="p-4 text-center">Đang tải...</li> :
+                     tasks.map(task => (
+                        <TaskItem key={task.id} task={task} users={users} isManager={true} onDelete={handleDeleteTask} onResetPassword={handleResetPassword}/>
+                    ))}
+                </ul>
+            </div>
+
+            {isModalOpen && (
+                <CreateTaskModal 
+                    onClose={() => setIsModalOpen(false)} 
+                    members={users} 
+                    onCreate={handleCreateTask}
+                    managerId={manager.uid}
+                />
+            )}
+        </div>
+    );
+}
+
+// --- GIAO DIỆN CỦA THÀNH VIÊN ---
+function MemberView({ member }) {
+    const [allTasks, setAllTasks] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const tasksQuery = query(collection(db, "tasks"));
+        const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
+            const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllTasks(tasksData);
+            setIsLoading(false);
+        });
+
+        const fetchUsers = async () => {
+            const usersSnapshot = await getDocs(collection(db, "users"));
+            const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setUsers(usersData);
         };
+        fetchUsers();
+        return () => unsubscribeTasks();
+    }, []);
 
-        const handleLogout = () => {
-            DB.clearSession();
-            location.reload();
-        };
-        
-        const initializeApp = () => {
-            state.currentUser = DB.getSessionItem('currentUser');
-            if (state.currentUser) {
-                $('#login-screen').style.display = 'none';
-                $('#app').style.display = 'flex';
+    const myTasks = allTasks.filter(task => task.assigneeId === member.uid);
+    const otherTasks = allTasks.filter(task => task.assigneeId !== member.uid);
 
-                // Setup listeners that exist only in the app view
-                $('#main-nav').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const navLink = e.target.closest('.nav-link');
-                    if (navLink) navigate(navLink.dataset.view);
-                });
-                $('#logout-btn').addEventListener('click', handleLogout);
-                $('#add-new-btn').addEventListener('click', () => renderForm());
-                $('#close-modal-btn').addEventListener('click', closeModal);
-                $('#cancel-modal-btn').addEventListener('click', closeModal);
-                $('#save-modal-btn').addEventListener('click', handleFormSubmit);
-                window.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && !$('#form-modal').classList.contains('hidden')) closeModal();
-                });
+    return (
+        <div>
+            <h2 className="text-xl font-semibold mb-6">Công việc của tôi</h2>
+            <div className="bg-white shadow overflow-hidden sm:rounded-md mb-8">
+                <ul role="list" className="divide-y divide-gray-200">
+                    {isLoading ? <li className="p-4 text-center">Đang tải...</li> : 
+                     myTasks.length > 0 ? myTasks.map(task => (
+                        <TaskItem key={task.id} task={task} users={users} />
+                    )) : <li className="p-4 text-gray-500">Bạn không có công việc nào.</li>}
+                </ul>
+            </div>
 
-                updateUserProfileDisplay();
-                navigate('dashboard');
-            } else {
-                 $('#login-screen').style.display = 'flex';
-                 $('#app').style.display = 'none';
-                 $('#login-form').addEventListener('submit', handleLogin);
-            }
-        };
+            <h3 className="text-lg font-medium text-gray-800 mb-4">Tiến độ của thành viên khác</h3>
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                 <ul role="list" className="divide-y divide-gray-200">
+                    {isLoading ? <li className="p-4 text-center">Đang tải...</li> : 
+                    otherTasks.map(task => (
+                        <TaskItem key={task.id} task={task} users={users} isOtherMember={true} />
+                    ))}
+                </ul>
+            </div>
+        </div>
+    );
+}
 
-        // --- INITIALIZATION ---
-        initializeApp();
-    });
-    </script>
-</body>
-</html>
+// --- CÁC COMPONENT TÁI SỬ DỤNG ---
+function TaskItem({ task, users, isManager = false, isOtherMember = false, onDelete, onResetPassword }) {
+    const assignee = users.find(u => u.id === task.assigneeId);
+    const dueDate = task.dueDate?.toDate(); 
+    const isOverdue = dueDate && new Date() > dueDate && task.status !== 'completed';
+
+    const getStatusInfo = () => {
+        if (task.status === 'completed') return { text: 'Hoàn thành', color: 'bg-green-100 text-green-800' };
+        if (isOverdue) return { text: 'Quá hạn', color: 'bg-red-100 text-red-800' };
+        if (task.status === 'in-progress') return { text: 'Đang làm', color: 'bg-blue-100 text-blue-800' };
+        return { text: 'Chờ thực hiện', color: 'bg-gray-100 text-gray-800' };
+    };
+    const statusInfo = getStatusInfo();
+    
+    return (
+         <li className="px-4 py-4 sm:px-6">
+            <div className="flex items-center justify-between">
+                <p className="text-md font-medium text-indigo-600 truncate">{task.title}</p>
+                <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusInfo.color}`}>{statusInfo.text}</p>
+            </div>
+            <div className="mt-2 sm:flex sm:justify-between">
+                 <div className="sm:flex items-center gap-4">
+                    <p className="flex items-center text-sm text-gray-500">
+                         <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                        {assignee ? assignee.fullName : 'Không xác định'}
+                    </p>
+                    {isManager && assignee && (
+                        <button onClick={() => onResetPassword(assignee.email)} className="text-xs text-gray-500 hover:text-indigo-600">(Cấp lại mật khẩu)</button>
+                    )}
+                </div>
+                {dueDate && (
+                <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                    <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" /></svg>
+                    <p>Hạn chót: <time dateTime={dueDate.toISOString().split('T')[0]}>{dueDate.toLocaleDateString('vi-VN')}</time></p>
+                </div>
+                )}
+            </div>
+            <div className="mt-2 w-full bg-gray-200 rounded-full h-2.5"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${task.progress || 0}%` }}></div></div>
+             {!isOtherMember && (
+                <div className="mt-4 flex gap-4">
+                    {isManager ? (<><button className="text-sm text-blue-600 hover:text-blue-800">Sửa</button><button onClick={() => onDelete(task.id)} className="text-sm text-red-600 hover:text-red-800">Xóa</button></>) 
+                    : (<button className="text-sm px-3 py-1 bg-indigo-500 text-white rounded-md hover:bg-indigo-600" disabled={task.status === 'completed'}>{task.status === 'completed' ? 'Đã báo cáo' : 'Cập nhật & Báo cáo'}</button>)}
+                </div>
+             )}
+        </li>
+    );
+}
+
+function CreateTaskModal({ onClose, members, onCreate, managerId }) {
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [assigneeId, setAssigneeId] = useState(members[0]?.id || '');
+    const [dueDate, setDueDate] = useState('');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onCreate({ title, description, assigneeId, dueDate: new Date(dueDate), assignerId: managerId });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+            <div className="relative p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+                 <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Giao công việc mới</h3>
+                    <button onClick={onClose} className="text-gray-500 text-2xl hover:text-gray-800">&times;</button>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                     <div>
+                        <label className="block text-sm font-medium">Tiêu đề</label>
+                        <input type="text" value={title} onChange={e => setTitle(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"/>
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium">Mô tả chi tiết</label>
+                        <textarea value={description} onChange={e => setDescription(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium">Giao cho</label>
+                        <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                            {members.map(member => (<option key={member.id} value={member.id}>{member.fullName}</option>))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium">Hạn chót</label>
+                        <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"/>
+                    </div>
+                    <div className="flex justify-end gap-4 pt-4">
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Hủy</button>
+                        <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Giao việc</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
 
