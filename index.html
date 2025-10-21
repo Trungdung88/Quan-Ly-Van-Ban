@@ -113,7 +113,7 @@
             <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6">
                  <h2 id="view-title" class="text-2xl font-semibold text-gray-800">Bảng điều khiển</h2>
                  <button id="add-new-btn" class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow flex items-center">
-                     <i class="fas fa-plus mr-2"></i>Thêm mới
+                      <i class="fas fa-plus mr-2"></i>Thêm mới
                  </button>
             </header>
             <div id="content" class="flex-1 p-6 overflow-y-auto">
@@ -126,18 +126,18 @@
     <div id="form-modal" class="modal fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
         <div class="modal-content bg-white rounded-lg shadow-2xl w-full max-w-3xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
-                <h3 id="modal-title" class="text-xl font-semibold"></h3>
-                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
-            <div id="modal-body" class="p-6 max-h-[70vh] overflow-y-auto">
-                <!-- Form content will be injected here -->
-            </div>
-            <div class="p-6 bg-gray-50 border-t flex justify-end space-x-3">
-                 <button id="cancel-modal-btn" class="px-5 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Hủy bỏ</button>
-                 <button id="save-modal-btn" class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Lưu lại</button>
-            </div>
+                 <h3 id="modal-title" class="text-xl font-semibold"></h3>
+                 <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">
+                     <i class="fas fa-times text-2xl"></i>
+                 </button>
+             </div>
+             <div id="modal-body" class="p-6 max-h-[70vh] overflow-y-auto">
+                 <!-- Form content will be injected here -->
+             </div>
+             <div class="p-6 bg-gray-50 border-t flex justify-end space-x-3">
+                  <button id="cancel-modal-btn" class="px-5 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Hủy bỏ</button>
+                  <button id="save-modal-btn" class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Lưu lại</button>
+             </div>
         </div>
     </div>
     
@@ -297,38 +297,38 @@
             }
             return `
                  <table class="w-full text-left">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="p-3 font-semibold text-sm">Số/Ký hiệu</th>
-                            <th class="p-3 font-semibold text-sm">Trích yếu</th>
-                            <th class="p-3 font-semibold text-sm">Loại</th>
-                            <th class="p-3 font-semibold text-sm">Ngày ban hành</th>
-                            <th class="p-3 font-semibold text-sm">Người tạo</th>
-                            <th class="p-3 font-semibold text-sm text-right">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        ${docs.map(doc => {
-                            const canModify = state.currentUser.role === 'admin' || doc.createdBy === state.currentUser.id;
-                            const creator = state.users.find(u => u.id === doc.createdBy);
-                            return `
-                                <tr class="hover:bg-gray-50">
-                                    <td class="p-3 font-medium">${doc.docNumber}</td>
-                                    <td class="p-3 text-gray-600 max-w-sm truncate">${doc.summary}</td>
-                                    <td class="p-3">${getCategoryName(doc.category)}</td>
-                                    <td class="p-3 text-gray-600">${formatDate(doc.issueDate)}</td>
-                                    <td class="p-3 text-gray-500 text-sm">${creator ? creator.name : 'N/A'}</td>
-                                    <td class="p-3 text-right">
-                                        ${canModify ? `
-                                        <button data-id="${doc.id}" class="edit-btn text-blue-600 hover:text-blue-800 p-1"><i class="fas fa-pencil-alt"></i></button>
-                                        <button data-id="${doc.id}" class="delete-btn text-red-600 hover:text-red-800 p-1 ml-2"><i class="fas fa-trash-alt"></i></button>
-                                        ` : '<span class="text-xs text-gray-400">Không có quyền</span>'}
-                                    </td>
-                                </tr>
-                            `
-                        }).join('')}
-                    </tbody>
-                </table>
+                     <thead class="bg-gray-50">
+                         <tr>
+                             <th class="p-3 font-semibold text-sm">Số/Ký hiệu</th>
+                             <th class="p-3 font-semibold text-sm">Trích yếu</th>
+                             <th class="p-3 font-semibold text-sm">Loại</th>
+                             <th class="p-3 font-semibold text-sm">Ngày ban hành</th>
+                             <th class="p-3 font-semibold text-sm">Người tạo</th>
+                             <th class="p-3 font-semibold text-sm text-right">Hành động</th>
+                         </tr>
+                     </thead>
+                     <tbody class="divide-y divide-gray-200">
+                         ${docs.map(doc => {
+                             const canModify = state.currentUser.role === 'admin' || doc.createdBy === state.currentUser.id;
+                             const creator = state.users.find(u => u.id === doc.createdBy);
+                             return `
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="p-3 font-medium">${doc.docNumber}</td>
+                                     <td class="p-3 text-gray-600 max-w-sm truncate">${doc.summary}</td>
+                                     <td class="p-3">${getCategoryName(doc.category)}</td>
+                                     <td class="p-3 text-gray-600">${formatDate(doc.issueDate)}</td>
+                                     <td class="p-3 text-gray-500 text-sm">${creator ? creator.name : 'N/A'}</td>
+                                     <td class="p-3 text-right">
+                                         ${canModify ? `
+                                         <button data-id="${doc.id}" class="edit-btn text-blue-600 hover:text-blue-800 p-1"><i class="fas fa-pencil-alt"></i></button>
+                                         <button data-id="${doc.id}" class="delete-btn text-red-600 hover:text-red-800 p-1 ml-2"><i class="fas fa-trash-alt"></i></button>
+                                         ` : '<span class="text-xs text-gray-400">Không có quyền</span>'}
+                                     </td>
+                                 </tr>
+                             `
+                         }).join('')}
+                     </tbody>
+                 </table>
             `;
         };
         
@@ -350,8 +350,8 @@
                         <input id="search-end-date" type="date" class="p-2 border rounded-lg w-full">
                     </div>
                      <div class="flex justify-center">
-                        <button id="search-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 shadow flex items-center">
-                             <i class="fas fa-search mr-2"></i>Tìm kiếm
+                         <button id="search-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 shadow flex items-center">
+                              <i class="fas fa-search mr-2"></i>Tìm kiếm
                          </button>
                     </div>
                 </div>
@@ -374,31 +374,31 @@
                         <div>
                             <h4 class="text-md font-semibold mb-3">Thêm tài khoản mới</h4>
                              <form id="add-user-form" class="space-y-4 bg-gray-50 p-4 rounded-lg">
-                                <div>
-                                    <label class="block text-sm font-medium">Họ & Tên</label>
-                                    <input type="text" name="name" class="mt-1 p-2 border rounded-lg w-full" required>
-                                </div>
                                  <div>
-                                    <label class="block text-sm font-medium">Email (Tên đăng nhập)</label>
-                                    <input type="email" name="id" class="mt-1 p-2 border rounded-lg w-full" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium">Mật khẩu</label>
-                                    <input type="password" name="password" class="mt-1 p-2 border rounded-lg w-full" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium">Đơn vị</label>
-                                    <input type="text" name="unit" class="mt-1 p-2 border rounded-lg w-full" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium">Vai trò</label>
-                                    <select name="role" class="mt-1 p-2 border rounded-lg w-full" required>
-                                        <option value="user">User</option>
-                                        <option value="admin">Admin</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">Tạo người dùng</button>
-                            </form>
+                                     <label class="block text-sm font-medium">Họ & Tên</label>
+                                     <input type="text" name="name" class="mt-1 p-2 border rounded-lg w-full" required>
+                                 </div>
+                                  <div>
+                                     <label class="block text-sm font-medium">Email (Tên đăng nhập)</label>
+                                     <input type="email" name="id" class="mt-1 p-2 border rounded-lg w-full" required>
+                                 </div>
+                                 <div>
+                                     <label class="block text-sm font-medium">Mật khẩu</label>
+                                     <input type="password" name="password" class="mt-1 p-2 border rounded-lg w-full" required>
+                                 </div>
+                                 <div>
+                                     <label class="block text-sm font-medium">Đơn vị</label>
+                                     <input type="text" name="unit" class="mt-1 p-2 border rounded-lg w-full" required>
+                                 </div>
+                                 <div>
+                                     <label class="block text-sm font-medium">Vai trò</label>
+                                     <select name="role" class="mt-1 p-2 border rounded-lg w-full" required>
+                                         <option value="user">User</option>
+                                         <option value="admin">Admin</option>
+                                     </select>
+                                 </div>
+                                 <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">Tạo người dùng</button>
+                             </form>
                         </div>
                     </div>
                 </div>
@@ -429,18 +429,18 @@
                 <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
                     <h3 class="text-lg font-semibold mb-4 border-b pb-2">Quản lý dữ liệu</h3>
                      <div class="grid md:grid-cols-2 gap-6">
-                        <div>
+                         <div>
                              <p class="font-medium mb-2">Sao lưu dữ liệu</p>
                              <p class="text-sm text-gray-500 mb-2">Xuất toàn bộ văn bản và danh mục ra tệp JSON.</p>
                              <button id="backup-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 w-full md:w-auto">Sao lưu</button>
-                        </div>
-                        <div class="border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6">
+                         </div>
+                         <div class="border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6">
                              <p class="font-medium mb-2">Phục hồi dữ liệu</p>
                              <p class="text-sm text-gray-500 mb-2">Nhập dữ liệu từ tệp JSON. <strong class="text-red-500">Cảnh báo: Dữ liệu hiện tại sẽ bị ghi đè.</strong></p>
                              <input type="file" id="restore-input" class="hidden" accept=".json">
                              <button id="restore-btn" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 w-full md:w-auto">Chọn tệp & Phục hồi</button>
-                        </div>
-                     </div>
+                         </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -451,28 +451,28 @@
             const users = state.users;
             container.innerHTML = `
                  <table class="w-full text-left">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="p-3 font-semibold text-sm">Họ & Tên</th>
-                            <th class="p-3 font-semibold text-sm">Email</th>
-                            <th class="p-3 font-semibold text-sm">Vai trò</th>
-                            <th class="p-3 font-semibold text-sm text-right">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                    ${users.map(user => `
-                        <tr class="hover:bg-gray-50">
-                            <td class="p-3">${user.name}</td>
-                            <td class="p-3 text-gray-600">${user.id}</td>
-                            <td class="p-3"><span class="px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-800'}">${user.role}</span></td>
-                            <td class="p-3 text-right">
-                                ${user.id !== state.currentUser.id ? `
-                                <button data-id="${user.id}" class="delete-user-btn text-red-600 hover:text-red-800 p-1"><i class="fas fa-trash-alt"></i></button>
-                                ` : ''}
-                            </td>
-                        </tr>
-                    `).join('')}
-                    </tbody>
+                     <thead class="bg-gray-50">
+                         <tr>
+                             <th class="p-3 font-semibold text-sm">Họ & Tên</th>
+                             <th class="p-3 font-semibold text-sm">Email</th>
+                             <th class="p-3 font-semibold text-sm">Vai trò</th>
+                             <th class="p-3 font-semibold text-sm text-right">Hành động</th>
+                         </tr>
+                     </thead>
+                     <tbody class="divide-y divide-gray-200">
+                     ${users.map(user => `
+                         <tr class="hover:bg-gray-50">
+                             <td class="p-3">${user.name}</td>
+                             <td class="p-3 text-gray-600">${user.id}</td>
+                             <td class="p-3"><span class="px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-800'}">${user.role}</span></td>
+                             <td class="p-3 text-right">
+                                 ${user.id !== state.currentUser.id ? `
+                                 <button data-id="${user.id}" class="delete-user-btn text-red-600 hover:text-red-800 p-1"><i class="fas fa-trash-alt"></i></button>
+                                 ` : ''}
+                             </td>
+                         </tr>
+                     `).join('')}
+                     </tbody>
                  </table>
             `;
             $$('.delete-user-btn').forEach(btn => {
@@ -523,9 +523,9 @@
                         <div>
                             <label class="block text-sm font-medium">Loại văn bản *</label>
                              <select name="docTypeId" class="mt-1 p-2 border rounded-lg w-full" required>
-                                <option value="">-- Chọn loại --</option>
-                                ${docTypesOptions}
-                            </select>
+                                 <option value="">-- Chọn loại --</option>
+                                 ${docTypesOptions}
+                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium">Ngày ban hành *</label>
@@ -773,9 +773,9 @@
              $('#user-name-display').textContent = state.currentUser.name;
              $('#user-unit-display').textContent = state.currentUser.unit;
              if (state.currentUser.role !== 'admin') {
-                $('#nav-settings').style.display = 'none';
+                 $('#nav-settings').style.display = 'none';
              } else {
-                $('#nav-settings').style.display = 'flex';
+                 $('#nav-settings').style.display = 'flex';
              }
         };
 
@@ -861,4 +861,3 @@
     </script>
 </body>
 </html>
-
